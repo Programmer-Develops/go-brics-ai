@@ -13,6 +13,9 @@ export default function GobricsAssistant() {
   const [savedStatus, setSavedStatus] = useState(false);
   const [copyStatus, setCopyStatus] = useState(false);
   const [libraryItems, setLibraryItems] = useState([]);
+  
+  // NEW: State to remember exactly what inputs generated the current output
+  const [lastPayload, setLastPayload] = useState(null);
 
   // Form States
   const [track, setTrack] = useState("A");
@@ -38,16 +41,24 @@ export default function GobricsAssistant() {
     setOutput("");
     setSavedStatus(false);
 
-    let payload = {};
-    if (action === "recommender") payload = { track, skills, hours };
-    if (action === "sales") payload = { product: salesProduct, persona };
-    if (action === "content") payload = { product: contentProduct, type: contentType };
+    // Save capitalized keys for the UI badges
+    let displayPayload = {};
+    if (action === "recommender") displayPayload = { Track: track, Skills: skills, Hours: hours };
+    if (action === "sales") displayPayload = { Product: salesProduct, Persona: persona };
+    if (action === "content") displayPayload = { Product: contentProduct, Type: contentType };
+    setLastPayload(displayPayload);
+
+    // Use lowercase keys for the backend API
+    let apiPayload = {};
+    if (action === "recommender") apiPayload = { track, skills, hours };
+    if (action === "sales") apiPayload = { product: salesProduct, persona };
+    if (action === "content") apiPayload = { product: contentProduct, type: contentType };
 
     try {
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, payload })
+        body: JSON.stringify({ action, payload: apiPayload })
       });
       const data = await res.json();
       setOutput(data.result);
@@ -76,6 +87,7 @@ export default function GobricsAssistant() {
         title,
         type,
         content: output,
+        context: lastPayload, // NEW: Save the inputs to Firestore!
         createdAt: serverTimestamp()
       });
       setSavedStatus(true);
@@ -122,6 +134,13 @@ export default function GobricsAssistant() {
         {activeTab === "sales" && (
           <div className="space-y-4 max-w-xl">
             <h2 className="text-2xl font-bold text-slate-800">B2B Outreach Generator</h2>
+            <select value={salesProduct} onChange={(e) => setSalesProduct(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50 text-sm text-slate-600">
+              <option value="SKU-01 Kavach Shield OM">SKU-01: Kavach Shield OM</option>
+              <option value="SKU-02 Vastu Dosh Pyramid">SKU-02: Vastu Dosh Pyramid</option>
+              <option value="SKU-03 Rudra-Shila Raksha Mala">SKU-03: Rudra-Shila Raksha Mala</option>
+              <option value="SKU-04 Amrit Jal Shuddhi Set">SKU-04: Amrit Jal Shuddhi Set</option>
+              <option value="SKU-05 Shila Raksha Pendant OM">SKU-05: Shila Raksha Pendant OM</option>
+            </select>
             <input value={persona} onChange={(e) => setPersona(e.target.value)} placeholder="Target Persona (e.g., Yoga Studio Owner)" className="w-full p-3 border rounded-lg bg-slate-50 text-sm text-slate-600"/>
             <button onClick={() => handleGenerate("sales")} disabled={!persona} className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 disabled:opacity-50">
               {loading ? <Loader2 className="animate-spin w-4 h-4"/> : <Send className="w-4 h-4"/>} Generate Scripts
@@ -133,6 +152,13 @@ export default function GobricsAssistant() {
         {activeTab === "content" && (
           <div className="space-y-4 max-w-xl">
             <h2 className="text-2xl font-bold text-slate-800">Content Brief Generator</h2>
+            <select value={contentProduct} onChange={(e) => setContentProduct(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50 text-sm text-slate-600">
+              <option value="SKU-01 Kavach Shield OM">SKU-01: Kavach Shield OM</option>
+              <option value="SKU-02 Vastu Dosh Pyramid">SKU-02: Vastu Dosh Pyramid</option>
+              <option value="SKU-03 Rudra-Shila Raksha Mala">SKU-03: Rudra-Shila Raksha Mala</option>
+              <option value="SKU-04 Amrit Jal Shuddhi Set">SKU-04: Amrit Jal Shuddhi Set</option>
+              <option value="SKU-05 Shila Raksha Pendant OM">SKU-05: Shila Raksha Pendant OM</option>
+            </select>
             <select value={contentType} onChange={(e) => setContentType(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50 text-sm text-slate-600">
               <option>SEO Product Description</option>
               <option>3x Social Media Posts</option>
@@ -159,7 +185,8 @@ export default function GobricsAssistant() {
                 </button>
                 <button 
                   onClick={() => saveToLibrary(`${activeTab} Asset`, activeTab)}
-                  className={`text-sm px-3 py-1 rounded-lg flex items-center gap-1 ${savedStatus ? 'bg-green-100 text-green-700' : 'bg-slate-900 text-white'}`}
+                  disabled={savedStatus}
+                  className={`text-sm px-3 py-1 rounded-lg flex items-center gap-1 ${savedStatus ? 'bg-green-100 text-green-700' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                 >
                   {savedStatus ? <CheckCircle2 className="w-4 h-4"/> : <Library className="w-4 h-4"/>} 
                   {savedStatus ? 'Saved to Cohort' : 'Share with Cohort'}
@@ -180,12 +207,26 @@ export default function GobricsAssistant() {
               {libraryItems.length === 0 ? <p className="text-slate-500">No items saved yet.</p> : null}
               {libraryItems.map(item => (
                 <div key={item.id} className="border p-4 rounded-xl shadow-sm">
-                  <div className="flex justify-between mb-2">
+                  <div className="flex justify-between mb-3">
                     <span className="text-xs font-bold uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded">{item.type}</span>
                     <span className="text-xs text-slate-500">{item.createdAt?.toDate().toLocaleString() || 'Just now'}</span>
                   </div>
+
+                  {/* NEW: Context Badges Rendering */}
+                  {item.context && (
+                    <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-slate-100">
+                      {Object.entries(item.context).map(([key, value]) => (
+                        value ? (
+                          <span key={key} className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
+                            <span className="text-slate-400 mr-1">{key}:</span>{value}
+                          </span>
+                        ) : null
+                      ))}
+                    </div>
+                  )}
+
                   {/* let user expand the content and unexpand content */}
-                  <div className="prose prose-sm line-clamp-3 text-slate-700" onClick={(e) => {
+                  <div className="prose prose-sm line-clamp-3 text-slate-700 cursor-pointer" onClick={(e) => {
                     const contentDiv = e.currentTarget;
                     contentDiv.classList.toggle("line-clamp-3");
                     contentDiv.classList.toggle("line-clamp-none");
