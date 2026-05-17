@@ -182,8 +182,14 @@ export default function GobricsAssistant() {
                 <div key={item.id} className="border p-4 rounded-xl shadow-sm">
                   <div className="flex justify-between mb-2">
                     <span className="text-xs font-bold uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded">{item.type}</span>
+                    <span className="text-xs text-slate-500">{item.createdAt?.toDate().toLocaleString() || 'Just now'}</span>
                   </div>
-                  <div className="prose prose-sm line-clamp-3">
+                  {/* let user expand the content and unexpand content */}
+                  <div className="prose prose-sm line-clamp-3 text-slate-700" onClick={(e) => {
+                    const contentDiv = e.currentTarget;
+                    contentDiv.classList.toggle("line-clamp-3");
+                    contentDiv.classList.toggle("line-clamp-none");
+                  }}>
                     <ReactMarkdown>{item.content}</ReactMarkdown>
                   </div>
                 </div>
