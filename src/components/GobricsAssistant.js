@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { db } from "../lib/firebase";
-import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, limit, startAfter, getDocs } from "firebase/firestore";
 import ReactMarkdown from "react-markdown";
-import { Sparkles, Briefcase, FileText, Library, Target, Send, Loader2, Copy, CheckCircle2 } from "lucide-react";
+import { Sparkles, Briefcase, FileText, Library, Target, Send, Loader2, Copy, CheckCircle2, ChevronDown } from "lucide-react";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function GobricsAssistant() {
   const [activeTab, setActiveTab] = useState("recommender");
@@ -12,10 +14,16 @@ export default function GobricsAssistant() {
   const [output, setOutput] = useState("");
   const [savedStatus, setSavedStatus] = useState(false);
   const [copyStatus, setCopyStatus] = useState(false);
-  const [libraryItems, setLibraryItems] = useState([]);
+  const [copyStatuses, setCopyStatuses] = useState({});
   
-  // NEW: State to remember exactly what inputs generated the current output
+  // Library State
+  const [libraryItems, setLibraryItems] = useState([]);
   const [lastPayload, setLastPayload] = useState(null);
+  
+  // Pagination State
+  const [lastVisible, setLastVisible] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   // Form States
   const [track, setTrack] = useState("A");
@@ -28,27 +36,82 @@ export default function GobricsAssistant() {
   const [contentProduct, setContentProduct] = useState("SKU-02 Vastu Dosh Pyramid");
   const [contentType, setContentType] = useState("SEO Product Description");
 
+  // Initial Fetch (First Page)
   useEffect(() => {
-    const q = query(collection(db, "library"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setLibraryItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
+    const fetchInitialData = async () => {
+      try {
+        const q = query(
+          collection(db, "library"), 
+          orderBy("createdAt", "desc"),
+          limit(ITEMS_PER_PAGE)
+        );
+
+        const documentSnapshots = await getDocs(q);
+        
+        const items = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLibraryItems(items);
+
+        // Save the last visible document for the next page
+        const lastVisibleDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+        setLastVisible(lastVisibleDoc);
+        
+        // If we fetched fewer items than the limit, there is no more data
+        if (documentSnapshots.docs.length < ITEMS_PER_PAGE) {
+          setHasMore(false);
+        } else {
+           setHasMore(true);
+        }
+
+      } catch (error) {
+        console.error("Error fetching initial library items:", error);
+      }
+    };
+
+    fetchInitialData();
   }, []);
+
+  // Fetch Next Page
+  const fetchMore = async () => {
+    if (!lastVisible || !hasMore) return;
+    
+    setLoadingMore(true);
+    try {
+      const q = query(
+        collection(db, "library"),
+        orderBy("createdAt", "desc"),
+        startAfter(lastVisible),
+        limit(ITEMS_PER_PAGE)
+      );
+
+      const documentSnapshots = await getDocs(q);
+      
+      const newItems = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLibraryItems(prev => [...prev, ...newItems]);
+
+      // Update the last visible document
+      const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(newLastVisible);
+
+      if (documentSnapshots.docs.length < ITEMS_PER_PAGE) {
+        setHasMore(false);
+      }
+    } catch (error) {
+       console.error("Error fetching more items:", error);
+    }
+    setLoadingMore(false);
+  };
 
   const handleGenerate = async (action) => {
     setLoading(true);
     setOutput("");
     setSavedStatus(false);
 
-    // Save capitalized keys for the UI badges
     let displayPayload = {};
     if (action === "recommender") displayPayload = { Track: track, Skills: skills, Hours: hours };
     if (action === "sales") displayPayload = { Product: salesProduct, Persona: persona };
     if (action === "content") displayPayload = { Product: contentProduct, Type: contentType };
     setLastPayload(displayPayload);
 
-    // Use lowercase keys for the backend API
     let apiPayload = {};
     if (action === "recommender") apiPayload = { track, skills, hours };
     if (action === "sales") apiPayload = { product: salesProduct, persona };
@@ -70,7 +133,6 @@ export default function GobricsAssistant() {
 
   const copyToClipboard = async () => {
     if (!output) return;
-
     try {
       await navigator.clipboard.writeText(output);
       setCopyStatus(true);
@@ -80,19 +142,43 @@ export default function GobricsAssistant() {
     }
   };
 
-  // Push to Firebase
+  // Push to Firebase and update local state to avoid full refetch
   const saveToLibrary = async (title, type) => {
     try {
-      await addDoc(collection(db, "library"), {
+      const docRef = await addDoc(collection(db, "library"), {
         title,
         type,
         content: output,
-        context: lastPayload, // NEW: Save the inputs to Firestore!
+        context: lastPayload,
         createdAt: serverTimestamp()
       });
+      
       setSavedStatus(true);
+      
+      // Optimistically update the UI to show the new item at the top
+      const newItem = {
+          id: docRef.id,
+          title,
+          type,
+          content: output,
+          context: lastPayload,
+          createdAt: { toDate: () => new Date() } // Mocking Firebase timestamp for immediate render
+      };
+      setLibraryItems(prev => [newItem, ...prev]);
+
     } catch (err) {
       console.error("Error saving to Firestore", err);
+    }
+  };
+
+  const copyLibraryItem = async (id, text) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyStatuses(prev => ({ ...prev, [id]: true }));
+      setTimeout(() => setCopyStatuses(prev => ({ ...prev, [id]: false })), 2000);
+    } catch (err) {
+      console.error("Error copying library item", err);
     }
   };
 
@@ -199,42 +285,86 @@ export default function GobricsAssistant() {
           </div>
         )}
 
-        {/* Library Tab */}
+        {/* Library Tab with Pagination */}
         {activeTab === "library" && (
           <div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">Global Cohort Library</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {libraryItems.length === 0 ? <p className="text-slate-500">No items saved yet.</p> : null}
-              {libraryItems.map(item => (
-                <div key={item.id} className="border p-4 rounded-xl shadow-sm">
-                  <div className="flex justify-between mb-3">
-                    <span className="text-xs font-bold uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded">{item.type}</span>
-                    <span className="text-xs text-slate-500">{item.createdAt?.toDate().toLocaleString() || 'Just now'}</span>
-                  </div>
-
-                  {/* NEW: Context Badges Rendering */}
-                  {item.context && (
-                    <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-slate-100">
-                      {Object.entries(item.context).map(([key, value]) => (
-                        value ? (
-                          <span key={key} className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
-                            <span className="text-slate-400 mr-1">{key}:</span>{value}
-                          </span>
-                        ) : null
-                      ))}
-                    </div>
-                  )}
-
-                  {/* let user expand the content and unexpand content */}
-                  <div className="prose prose-sm line-clamp-3 text-slate-700 cursor-pointer" onClick={(e) => {
-                    const contentDiv = e.currentTarget;
-                    contentDiv.classList.toggle("line-clamp-3");
-                    contentDiv.classList.toggle("line-clamp-none");
-                  }}>
-                    <ReactMarkdown>{item.content}</ReactMarkdown>
-                  </div>
+            <div className="mb-6 border-b pb-4">
+               <h2 className="text-2xl font-bold text-slate-800 mb-1">Global Cohort Library</h2>
+               <p className="text-sm text-slate-500">Shared intelligence across all 30 GO-BRICS teams. Latest artifacts.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-5">
+              {libraryItems.length === 0 ? (
+                <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                   <p className="text-slate-500 font-medium">No intelligence gathered yet.</p>
+                   <p className="text-sm text-slate-400 mt-1">Generate and share artifacts to populate the library.</p>
                 </div>
-              ))}
+              ) : (
+                libraryItems.map(item => (
+                  <div key={item.id} className="border border-slate-200 p-5 rounded-xl shadow-sm bg-white hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-xs font-bold uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full">
+                        {item.type}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => copyLibraryItem(item.id, item.content)}
+                          className="text-xs px-2 py-1 rounded-full bg-slate-900 text-white flex items-center gap-2 hover:bg-slate-800"
+                        >
+                          <Copy className="w-3 h-3" />
+                          {copyStatuses[item.id] ? 'Copied' : 'Copy'}
+                        </button>
+                        <span className="text-xs font-medium text-slate-400">
+                          {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString([], {year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'}) : 'Just now'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {item.context && (
+                      <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-slate-100">
+                        {Object.entries(item.context).map(([key, value]) => (
+                          value ? (
+                            <span key={key} className="text-xs font-medium text-slate-600 bg-slate-100/80 px-2.5 py-1 rounded-md border border-slate-200">
+                              <span className="text-slate-400 mr-1">{key}:</span>{value}
+                            </span>
+                          ) : null
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="prose prose-sm max-w-none text-slate-700 line-clamp-3 cursor-pointer group" onClick={(e) => {
+                      const contentDiv = e.currentTarget;
+                      contentDiv.classList.toggle("line-clamp-3");
+                      contentDiv.classList.toggle("line-clamp-none");
+                    }}>
+                      <ReactMarkdown>{item.content}</ReactMarkdown>
+                      <div className="mt-2 text-xs text-blue-500 font-medium opacity-0 group-[.line-clamp-3]:opacity-100 transition-opacity flex items-center gap-1">
+                        Click to expand <ChevronDown className="w-3 h-3"/>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {/* Pagination Controls */}
+              {libraryItems.length > 0 && hasMore && (
+                <div className="flex justify-center mt-6 pt-4">
+                  <button 
+                    onClick={fetchMore} 
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-full hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+                  >
+                    {loadingMore ? <Loader2 className="w-4 h-4 animate-spin"/> : <ChevronDown className="w-4 h-4"/>}
+                    {loadingMore ? "Loading..." : "Load More Artifacts"}
+                  </button>
+                </div>
+              )}
+              
+              {libraryItems.length > 0 && !hasMore && (
+                 <div className="text-center mt-8 text-xs text-slate-400 font-medium">
+                    End of library history.
+                 </div>
+              )}
             </div>
           </div>
         )}
@@ -246,7 +376,7 @@ export default function GobricsAssistant() {
 
 function NavButton({ active, onClick, icon, label }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${active ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>
+    <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${active ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
       {icon} {label}
     </button>
   );
