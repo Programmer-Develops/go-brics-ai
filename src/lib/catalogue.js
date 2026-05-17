@@ -74,3 +74,48 @@ export const GOBRICS_CATALOGUE = `
 * O11 - Admin Audit Report: GBP Accuracy Verified | Grade A | 180 GBP | 5-6 hrs: Full GBP allocation audit for 6 teams.
 * O12 - Cross-Team Systems Integration Delivered | Grade S | 300 GBP | 10-15 hrs: Unified Ops system usable by all 30 teams and 5 admins.
 `;
+
+export const ADISHILA_CATALOGUE = `
+--- OFFICIAL ADISHILA PRODUCT KNOWLEDGE BASE ---
+BRAND & MATERIAL SPECIFICATIONS:
+- Origin: Karelia, Russia (Only natural deposit on Earth). 2-Billion-years old (Precambrian era).
+- Core Material: Authentic Shungite, containing Fullerene C60 (Nobel Prize molecule 1996).
+- Core Properties: Documented EMF radiation absorption shielding. Adapted for Vedic, Vastu, and Ayurvedic traditions.
+
+PRODUCT LINEUP & PRICING (Excluding 18% GST):
+1. SKU-01: Kavach Shield OM
+   - Category: EMF Protection. Polished plate for phone cases. Sacred OM shape (gold paint).
+   - Specs: 25mm diameter, 2.5-3.0mm thick, 4-6 grams. 3M VHB removable adhesive.
+   - Wholesale: ₹800 | MRP: ₹1,499 | Retailer Margin: 46.6%
+
+2. SKU-02: Vastu Dosh Pyramid
+   - Category: Vastu Shastra. For room corners, routers, office desks. 
+   - Specs: 40-50mm base, 30-40mm height, 60-120 grams. 2-3mm copper foil band at base.
+   - Properties: Black shungite absorbs negative energy; copper band conducts Prana.
+   - Wholesale: ₹1,100 | MRP: ₹2,199 | Retailer Margin: 50.0%
+
+3. SKU-03: Rudra-Shila Raksha Mala
+   - Category: Personal Protection. Wrist mala, elastic cord, unisex. Volume seller.
+   - Specs: 27 beads total (26 polished 8mm shungite + 1 genuine Mukhi Rudraksha). 16-20cm stretch, 15-20 grams.
+   - Wholesale: ₹900 | MRP: ₹1,499 | Retailer Margin: 40.0%
+
+4. SKU-04: Amrit Jal Shuddhi Set
+   - Category: Ayurveda Wellness. Water purification ritual set.
+   - Specs: 300g washed shungite chips (for 3L water), 1 copper coin/disc. Comes in cotton/jute drawstring pouch.
+   - Usage: Drop into vessel, soak 6-8 hours. Lifespan is 6-12 months.
+   - Wholesale: ₹950 | MRP: ₹1,999 | Retailer Margin: 52.5%
+
+5. SKU-05: Shila Raksha Pendant OM
+   - Category: Jewellery. Polished disc worn at Vishuddha (throat) chakra for continuous shielding.
+   - Specs: 30-35mm diameter, 5-6mm thick, 8-12 grams. Laser-engraved OM (gold). Waxed cotton adjustable cord (~50cm).
+   - Wholesale: ₹700 | MRP: ₹1,299 | Retailer Margin: 46.1%
+
+B2B PARTNERSHIP TERMS & LOGISTICS:
+- Minimum Order (MOQ): 25 pcs per SKU (first order), 10 pcs per SKU (reorders). Samples available at ₹500/SKU + shipping.
+- Payment Terms: 50% advance, 50% on dispatch via Bank transfer, UPI, or Razorpay.
+- Shipping: Pan-India (5-7 business days). Free shipping above ₹25,000. Insured against transit damage.
+- Returns/Breakage: Broken items replaced free with photo proof within 48 hours. Natural variations are authentic.
+- Taxes & Customs: HS Code 6815.99. GST is 18% extra on Wholesale. Customs duties included in WS.
+- Marketing Support Provided: High-res images, social media creatives, printed info cards, QR authenticity verification.
+- Contact: info@adishila.in
+`;
