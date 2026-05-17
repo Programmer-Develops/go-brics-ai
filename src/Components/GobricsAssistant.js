@@ -93,14 +93,14 @@ export default function GobricsAssistant() {
         {/* Recommender Tab */}
         {activeTab === "recommender" && (
           <div className="space-y-4 max-w-xl">
-            <h2 className="text-2xl font-bold">AI Task Recommender</h2>
-            <select value={track} onChange={(e) => setTrack(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50">
+            <h2 className="text-2xl font-bold text-slate-800">AI Task Recommender</h2>
+            <select value={track} onChange={(e) => setTrack(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50 text-slate-600">
               <option value="A">Track A - Sales</option>
               <option value="B">Track B - Projects</option>
             </select>
-            <input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="Your Skills (e.g., Python, Video Editing)" className="w-full p-3 border rounded-lg bg-slate-50"/>
+            <input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="Your Skills (e.g., Python, Video Editing)" className="w-full p-3 border rounded-lg bg-slate-50 text-slate-600"/>
             <button onClick={() => handleGenerate("recommender")} className="bg-slate-900 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-slate-800">
-              {loading ? <Loader2 className="animate-spin w-4 h-4"/> : <Sparkles w-4 h-4/>} Recommend Tasks
+              {loading ? <Loader2 className="animate-spin w-4 h-4"/> : <Sparkles className="w-4 h-4"/>} Recommend Tasks
             </button>
           </div>
         )}
@@ -108,10 +108,10 @@ export default function GobricsAssistant() {
         {/* Sales Tab */}
         {activeTab === "sales" && (
           <div className="space-y-4 max-w-xl">
-            <h2 className="text-2xl font-bold">B2B Outreach Generator</h2>
-            <input value={persona} onChange={(e) => setPersona(e.target.value)} placeholder="Target Persona (e.g., Yoga Studio Owner)" className="w-full p-3 border rounded-lg bg-slate-50"/>
+            <h2 className="text-2xl font-bold text-slate-800">B2B Outreach Generator</h2>
+            <input value={persona} onChange={(e) => setPersona(e.target.value)} placeholder="Target Persona (e.g., Yoga Studio Owner)" className="w-full p-3 border rounded-lg bg-slate-50 text-slate-600"/>
             <button onClick={() => handleGenerate("sales")} disabled={!persona} className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 disabled:opacity-50">
-              {loading ? <Loader2 className="animate-spin w-4 h-4"/> : <Send w-4 h-4/>} Generate Scripts
+              {loading ? <Loader2 className="animate-spin w-4 h-4"/> : <Send className="w-4 h-4"/>} Generate Scripts
             </button>
           </div>
         )}
@@ -119,19 +119,19 @@ export default function GobricsAssistant() {
         {/* Content Tab */}
         {activeTab === "content" && (
           <div className="space-y-4 max-w-xl">
-            <h2 className="text-2xl font-bold">Content Brief Generator</h2>
-            <select value={contentType} onChange={(e) => setContentType(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50">
+            <h2 className="text-2xl font-bold text-slate-800">Content Brief Generator</h2>
+            <select value={contentType} onChange={(e) => setContentType(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50 text-slate-600">
               <option>SEO Product Description</option>
               <option>3x Social Media Posts</option>
               <option>Blog Article Outline</option>
             </select>
             <button onClick={() => handleGenerate("content")} className="bg-purple-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-purple-700">
-              {loading ? <Loader2 className="animate-spin w-4 h-4"/> : <FileText w-4 h-4/>} Generate Content
+              {loading ? <Loader2 className="animate-spin w-4 h-4"/> : <FileText className="w-4 h-4"/>} Generate Content
             </button>
           </div>
         )}
 
-        {/* Output Display (Only for Gen Tabs) */}
+        {/* Output Display */}
         {activeTab !== "library" && output && (
           <div className="mt-8 border border-slate-200 rounded-xl overflow-hidden">
             <div className="bg-slate-50 p-3 flex justify-between border-b">
@@ -144,7 +144,7 @@ export default function GobricsAssistant() {
                 {savedStatus ? 'Saved to Library' : 'Save to Library'}
               </button>
             </div>
-            <div className="p-6 prose max-w-none text-sm">
+            <div className="p-6 prose max-w-none text-sm text-slate-800">
               <ReactMarkdown>{output}</ReactMarkdown>
             </div>
           </div>
@@ -153,7 +153,7 @@ export default function GobricsAssistant() {
         {/* Library Tab */}
         {activeTab === "library" && (
           <div>
-            <h2 className="text-2xl font-bold mb-6">Team Knowledge Library</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-6">Team Knowledge Library</h2>
             <div className="grid grid-cols-1 gap-4">
               {libraryItems.length === 0 ? <p className="text-slate-500">No items saved yet.</p> : null}
               {libraryItems.map(item => (
@@ -175,7 +175,6 @@ export default function GobricsAssistant() {
   );
 }
 
-// Sidebar Button Helper
 function NavButton({ active, onClick, icon, label }) {
   return (
     <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${active ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>
