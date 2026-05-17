@@ -11,6 +11,7 @@ export default function GobricsAssistant() {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState("");
   const [savedStatus, setSavedStatus] = useState(false);
+  const [copyStatus, setCopyStatus] = useState(false);
   const [libraryItems, setLibraryItems] = useState([]);
 
   // Form States
@@ -24,7 +25,6 @@ export default function GobricsAssistant() {
   const [contentProduct, setContentProduct] = useState("SKU-02 Vastu Dosh Pyramid");
   const [contentType, setContentType] = useState("SEO Product Description");
 
-  // Fetch Team Library from Firebase
   useEffect(() => {
     const q = query(collection(db, "library"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -57,6 +57,19 @@ export default function GobricsAssistant() {
     setLoading(false);
   };
 
+  const copyToClipboard = async () => {
+    if (!output) return;
+
+    try {
+      await navigator.clipboard.writeText(output);
+      setCopyStatus(true);
+      setTimeout(() => setCopyStatus(false), 2000);
+    } catch (err) {
+      console.error("Error copying to clipboard", err);
+    }
+  };
+
+  // Push to Firebase
   const saveToLibrary = async (title, type) => {
     try {
       await addDoc(collection(db, "library"), {
@@ -81,10 +94,10 @@ export default function GobricsAssistant() {
           <h1 className="font-bold">GO-BRICS AI Ops</h1>
         </div>
         
-        <NavButton active={activeTab === 'recommender'} onClick={() => setActiveTab('recommender')} icon={<Target/>} label="Task Recommender" />
-        <NavButton active={activeTab === 'sales'} onClick={() => setActiveTab('sales')} icon={<Briefcase/>} label="B2B Scripts (S02)" />
-        <NavButton active={activeTab === 'content'} onClick={() => setActiveTab('content')} icon={<FileText/>} label="Content Gen (C02)" />
-        <NavButton active={activeTab === 'library'} onClick={() => setActiveTab('library')} icon={<Library/>} label="Team Library" />
+        <NavButton active={activeTab === 'recommender'} onClick={() => setActiveTab('recommender')} icon={<Target className="w-4 h-4"/>} label="Task Recommender" />
+        <NavButton active={activeTab === 'sales'} onClick={() => setActiveTab('sales')} icon={<Briefcase className="w-4 h-4"/>} label="B2B Scripts (S02)" />
+        <NavButton active={activeTab === 'content'} onClick={() => setActiveTab('content')} icon={<FileText className="w-4 h-4"/>} label="Content Gen (C02)" />
+        <NavButton active={activeTab === 'library'} onClick={() => setActiveTab('library')} icon={<Library className="w-4 h-4"/>} label="Cohort Library" />
       </div>
 
       {/* Main Content Area */}
@@ -94,11 +107,11 @@ export default function GobricsAssistant() {
         {activeTab === "recommender" && (
           <div className="space-y-4 max-w-xl">
             <h2 className="text-2xl font-bold text-slate-800">AI Task Recommender</h2>
-            <select value={track} onChange={(e) => setTrack(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50 text-slate-600">
+            <select value={track} onChange={(e) => setTrack(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50 text-sm text-slate-600">
               <option value="A">Track A - Sales</option>
               <option value="B">Track B - Projects</option>
             </select>
-            <input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="Your Skills (e.g., Python, Video Editing)" className="w-full p-3 border rounded-lg bg-slate-50 text-slate-600"/>
+            <input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="Your Skills (e.g., Python, Video Editing)" className="w-full p-3 border rounded-lg bg-slate-50 text-sm text-slate-600"/>
             <button onClick={() => handleGenerate("recommender")} className="bg-slate-900 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-slate-800">
               {loading ? <Loader2 className="animate-spin w-4 h-4"/> : <Sparkles className="w-4 h-4"/>} Recommend Tasks
             </button>
@@ -109,7 +122,7 @@ export default function GobricsAssistant() {
         {activeTab === "sales" && (
           <div className="space-y-4 max-w-xl">
             <h2 className="text-2xl font-bold text-slate-800">B2B Outreach Generator</h2>
-            <input value={persona} onChange={(e) => setPersona(e.target.value)} placeholder="Target Persona (e.g., Yoga Studio Owner)" className="w-full p-3 border rounded-lg bg-slate-50 text-slate-600"/>
+            <input value={persona} onChange={(e) => setPersona(e.target.value)} placeholder="Target Persona (e.g., Yoga Studio Owner)" className="w-full p-3 border rounded-lg bg-slate-50 text-sm text-slate-600"/>
             <button onClick={() => handleGenerate("sales")} disabled={!persona} className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 disabled:opacity-50">
               {loading ? <Loader2 className="animate-spin w-4 h-4"/> : <Send className="w-4 h-4"/>} Generate Scripts
             </button>
@@ -120,7 +133,7 @@ export default function GobricsAssistant() {
         {activeTab === "content" && (
           <div className="space-y-4 max-w-xl">
             <h2 className="text-2xl font-bold text-slate-800">Content Brief Generator</h2>
-            <select value={contentType} onChange={(e) => setContentType(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50 text-slate-600">
+            <select value={contentType} onChange={(e) => setContentType(e.target.value)} className="w-full p-3 border rounded-lg bg-slate-50 text-sm text-slate-600">
               <option>SEO Product Description</option>
               <option>3x Social Media Posts</option>
               <option>Blog Article Outline</option>
@@ -134,15 +147,24 @@ export default function GobricsAssistant() {
         {/* Output Display */}
         {activeTab !== "library" && output && (
           <div className="mt-8 border border-slate-200 rounded-xl overflow-hidden">
-            <div className="bg-slate-50 p-3 flex justify-between border-b">
+            <div className="bg-slate-50 p-3 flex justify-between items-center border-b gap-2">
               <span className="font-semibold text-slate-600">AI Output</span>
-              <button 
-                onClick={() => saveToLibrary(`${activeTab} Asset`, activeTab)}
-                className={`text-sm px-3 py-1 rounded flex items-center gap-1 ${savedStatus ? 'bg-green-100 text-green-700' : 'bg-slate-900 text-white'}`}
-              >
-                {savedStatus ? <CheckCircle2 className="w-4 h-4"/> : <Library className="w-4 h-4"/>} 
-                {savedStatus ? 'Saved to Library' : 'Save to Library'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={copyToClipboard}
+                  className="text-sm px-3 py-1 rounded-lg bg-slate-900 text-white flex items-center gap-1 hover:bg-slate-800"
+                >
+                  <Copy className="w-4 h-4" />
+                  {copyStatus ? 'Copied' : 'Copy'}
+                </button>
+                <button 
+                  onClick={() => saveToLibrary(`${activeTab} Asset`, activeTab)}
+                  className={`text-sm px-3 py-1 rounded-lg flex items-center gap-1 ${savedStatus ? 'bg-green-100 text-green-700' : 'bg-slate-900 text-white'}`}
+                >
+                  {savedStatus ? <CheckCircle2 className="w-4 h-4"/> : <Library className="w-4 h-4"/>} 
+                  {savedStatus ? 'Saved to Cohort' : 'Share with Cohort'}
+                </button>
+              </div>
             </div>
             <div className="p-6 prose max-w-none text-sm text-slate-800">
               <ReactMarkdown>{output}</ReactMarkdown>
@@ -153,7 +175,7 @@ export default function GobricsAssistant() {
         {/* Library Tab */}
         {activeTab === "library" && (
           <div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-6">Team Knowledge Library</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Global Cohort Library</h2>
             <div className="grid grid-cols-1 gap-4">
               {libraryItems.length === 0 ? <p className="text-slate-500">No items saved yet.</p> : null}
               {libraryItems.map(item => (
