@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { db } from "../lib/firebase";
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, limit, startAfter, getDocs } from "firebase/firestore";
 import ReactMarkdown from "react-markdown";
-import { Sparkles, Briefcase, FileText, Library, Target, Send, Loader2, Copy, CheckCircle2, ChevronDown } from "lucide-react";
+import { Sparkles, Briefcase, FileText, Library, Target, Send, Loader2, Copy, CheckCircle2, ChevronDown, Search, Filter } from "lucide-react";
 
-const ITEMS_PER_PAGE = 10;
+// Bumped to 20 to make client-side searching more effective on initial load
+const ITEMS_PER_PAGE = 20; 
 
 export default function GobricsAssistant() {
   const [activeTab, setActiveTab] = useState("recommender");
@@ -20,10 +21,12 @@ export default function GobricsAssistant() {
   const [libraryItems, setLibraryItems] = useState([]);
   const [lastPayload, setLastPayload] = useState(null);
   
-  // Pagination State
+  // Pagination & Search State
   const [lastVisible, setLastVisible] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
 
   // Form States
   const [track, setTrack] = useState("A");
@@ -182,6 +185,18 @@ export default function GobricsAssistant() {
     }
   };
 
+  // Filter and Search Logic
+  const displayedItems = libraryItems.filter(item => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm || 
+      (item.content && item.content.toLowerCase().includes(searchLower)) ||
+      (item.context && JSON.stringify(item.context).toLowerCase().includes(searchLower));
+    
+    const matchesFilter = filterType === "all" || item.type === filterType;
+    
+    return matchesSearch && matchesFilter;
+  });
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row max-w-7xl mx-auto p-4 gap-6">
       
@@ -285,22 +300,48 @@ export default function GobricsAssistant() {
           </div>
         )}
 
-        {/* Library Tab with Pagination */}
+        {/* Library Tab with Search, Filter & Pagination */}
         {activeTab === "library" && (
           <div>
-            <div className="mb-6 border-b pb-4">
-               <h2 className="text-2xl font-bold text-slate-800 mb-1">Global Cohort Library</h2>
-               <p className="text-sm text-slate-500">Shared intelligence across all 30 GO-BRICS teams. Latest artifacts.</p>
+            <div className="mb-6 border-b pb-6">
+               <h2 className="text-2xl font-bold text-slate-800 mb-1">Global Cohort Library</h2>               
+               {/* Search and Filter UI */}
+               <div className="flex flex-col sm:flex-row gap-3">
+                 <div className="relative flex-1">
+                   <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                   <input 
+                     type="text" 
+                     placeholder="Search outputs, personas, or products..." 
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                     className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 shadow-sm"
+                   />
+                 </div>
+                 <div className="relative">
+                   <Filter className="w-4 h-4 absolute left-3 top-3 text-slate-400 pointer-events-none" />
+                   <select 
+                     value={filterType}
+                     onChange={(e) => setFilterType(e.target.value)}
+                     className="w-full sm:w-auto pl-9 pr-8 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 shadow-sm appearance-none cursor-pointer"
+                   >
+                     <option value="all">All Modules</option>
+                     {/* FIXED: Removed the word "Asset" from these values to match Firebase types perfectly */}
+                     <option value="recommender">Task Recommender</option>
+                     <option value="sales">B2B Scripts</option>
+                     <option value="content">Content Briefs</option>
+                   </select>
+                 </div>
+               </div>
             </div>
             
             <div className="grid grid-cols-1 gap-5">
-              {libraryItems.length === 0 ? (
+              {displayedItems.length === 0 ? (
                 <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                   <p className="text-slate-500 font-medium">No intelligence gathered yet.</p>
-                   <p className="text-sm text-slate-400 mt-1">Generate and share artifacts to populate the library.</p>
+                   <p className="text-slate-500 font-medium">No artifacts match your search.</p>
+                   <p className="text-sm text-slate-400 mt-1">Try adjusting your filters or loading more history.</p>
                 </div>
               ) : (
-                libraryItems.map(item => (
+                displayedItems.map(item => (
                   <div key={item.id} className="border border-slate-200 p-5 rounded-xl shadow-sm bg-white hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-center mb-4">
                       <span className="text-xs font-bold uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full">
@@ -347,7 +388,7 @@ export default function GobricsAssistant() {
               )}
 
               {/* Pagination Controls */}
-              {libraryItems.length > 0 && hasMore && (
+              {hasMore && (
                 <div className="flex justify-center mt-6 pt-4">
                   <button 
                     onClick={fetchMore} 
@@ -355,12 +396,12 @@ export default function GobricsAssistant() {
                     className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-full hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
                   >
                     {loadingMore ? <Loader2 className="w-4 h-4 animate-spin"/> : <ChevronDown className="w-4 h-4"/>}
-                    {loadingMore ? "Loading..." : "Load More Artifacts"}
+                    {loadingMore ? "Searching..." : "Load More Artifacts"}
                   </button>
                 </div>
               )}
               
-              {libraryItems.length > 0 && !hasMore && (
+              {!hasMore && libraryItems.length > 0 && (
                  <div className="text-center mt-8 text-xs text-slate-400 font-medium">
                     End of library history.
                  </div>
